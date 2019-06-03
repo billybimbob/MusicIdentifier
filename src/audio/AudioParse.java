@@ -6,6 +6,7 @@ import fourier.*;
 
 public class AudioParse {
     private static final int CHUNK_SIZE = 4096;
+    private static final int[] BOUNDS = {40, 80, 120, 180, 300};
 
     private AudioFormat defaultFormat() {
         float sampleRate = 8000.0f;
@@ -58,8 +59,37 @@ public class AudioParse {
         return freqs;
     }
 
-    private void keyPoints(Complex[] freqs) {
+    private int getRange(final int freq) { //could change to binary search
+        int idx = 0;
+        while(idx < BOUNDS.length && BOUNDS[idx] > freq)
+            idx++;
         
+        return idx;
+    }
+
+    //writes to input writer file
+    private void keyPoints(final Complex[][] freqs, BufferedWriter writing) throws IOException {
+        final int LOWER_LIMIT = BOUNDS[0];
+        final int UPPER_LIMIT = BOUNDS[BOUNDS.length-1];
+
+        for (int i = 0; i < freqs.length; i++) {
+            double[] highMags = new Double[BOUNDS.length];
+            double[] highFreqs = new Double[BOUNDS.length];
+
+            for (int freq = LOWER_LIMIT; freq < UPPER_LIMIT; freq++) {
+                int range = getRange(freq);
+                double mag = Math.log(freqs[i][freq].abs() + 1);
+
+                if (mag > highMags[range]) {
+                    highMags[range] = mag;
+                    highFreqs[range] = freq;
+                }
+
+                for (double highFreq: highFreqs)
+                    writing.write(highFreq + "\t");
+                writing.write("\n");
+            }
+        }
     }
 
     public static void main(String[] args) {
@@ -73,6 +103,10 @@ public class AudioParse {
                 System.out.println(val);
 
             Complex[][] freqs = audParse.freqTrans(audio);
+            
+            BufferedWriter bw = new BufferedWriter(new FileWriter("data.txt"));
+            audParse.keyPoints(freqs, bw);
+            bw.close();
 
         } catch (IOException e) {
             System.err.println("I/O problem: " + e);
