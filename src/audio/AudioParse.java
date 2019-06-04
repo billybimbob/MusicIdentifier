@@ -73,8 +73,8 @@ public class AudioParse {
         final int UPPER_LIMIT = BOUNDS[BOUNDS.length-1];
 
         for (int i = 0; i < freqs.length; i++) {
-            double[] highMags = new Double[BOUNDS.length];
-            double[] highFreqs = new Double[BOUNDS.length];
+            double[] highMags = new double[BOUNDS.length];
+            double[] highFreqs = new double[BOUNDS.length];
 
             for (int freq = LOWER_LIMIT; freq < UPPER_LIMIT; freq++) {
                 int range = getRange(freq);
@@ -84,11 +84,11 @@ public class AudioParse {
                     highMags[range] = mag;
                     highFreqs[range] = freq;
                 }
-
-                for (double highFreq: highFreqs)
-                    writing.write(highFreq + "\t");
-                writing.write("\n");
             }
+            System.out.println("got here");
+            for (double highFreq: highFreqs)
+                writing.write(highFreq + "\t");
+            writing.write("\n");
         }
     }
 
