@@ -11,6 +11,11 @@ public class DataPoint {
         this.time = time;
         this.keyPts = keyPts;
     }
+    public DataPoint (int time, double[] keyPts) { //songID undef not sure if to keep
+        this.songID = -1;
+        this.time = time;
+        this.keyPts = keyPts;
+    }
 
     public int getID() {
         return this.songID;

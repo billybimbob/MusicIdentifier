@@ -3,6 +3,7 @@ package audio;
 import javax.sound.sampled.*;
 import java.io.*;
 import fourier.*;
+import storage.*;
 
 public class AudioParse {
     private static final int CHUNK_SIZE = 4096;
@@ -68,9 +69,11 @@ public class AudioParse {
     }
 
     //writes to input writer file
-    private void keyPoints(final Complex[][] freqs, BufferedWriter writing) throws IOException {
+    private DataPoint[] keyPoints(final Complex[][] freqs, int songID, BufferedWriter writing) 
+        throws IOException {
         final int LOWER_LIMIT = BOUNDS[0];
         final int UPPER_LIMIT = BOUNDS[BOUNDS.length-1];
+        DataPoint[] points = new DataPoint[freqs.length];
 
         for (int i = 0; i < freqs.length; i++) {
             double[] highMags = new double[BOUNDS.length];
@@ -89,10 +92,13 @@ public class AudioParse {
             for (double highFreq: highFreqs)
                 writing.write(highFreq + "\t");
             writing.write("\n");
+
+            points[i] = new DataPoint(songID, i, highFreqs);
         }
+        return points;
     }
 
-    public static void main(String[] args) {
+    public static void parseSong (int songID, boolean adding) {
         AudioParse audParse = new AudioParse();
 
         try {
@@ -105,15 +111,32 @@ public class AudioParse {
             Complex[][] freqs = audParse.freqTrans(audio);
             
             BufferedWriter bw = new BufferedWriter(new FileWriter("data.txt"));
-            audParse.keyPoints(freqs, bw);
+            DataPoint[] pts = audParse.keyPoints(freqs, songID, bw);
             bw.close();
+
+            for (DataPoint pt: pts) {
+                if (adding) {
+                    SongMatches.addPoint(pt);
+                    System.out.println("Successfully added data");
+                } else {
+                    SongMatches matching = new SongMatches();
+                    int match = matching.findMatch(pt);
+                    System.out.println("Best match is:" + match);
+                }
+            }
 
         } catch (IOException e) {
             System.err.println("I/O problem: " + e);
             System.exit(-1);
         } catch (LineUnavailableException e) {
-            System.out.println("No audio: " + e);
+            System.err.println("No audio: " + e);
             System.exit(-1);
+        } catch (NoSuchFieldException e) {
+            System.err.println("No match found");
         }
+    }
+
+    public static void main(String[] args) {
+        //determine what to parse
     }
 }
