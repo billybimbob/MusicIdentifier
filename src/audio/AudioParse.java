@@ -1,6 +1,7 @@
 package audio;
 
 import javax.sound.sampled.*;
+import javax.sound.sampled.AudioFormat.*;
 import java.io.*;
 import fourier.*;
 import storage.*;
@@ -17,17 +18,38 @@ public class AudioParse {
         boolean bigEndian = true;
         return new AudioFormat(sampleRate, sampleSize, channels, signed, bigEndian);
     }
+    private AudioFormat decodeFormat(AudioFormat copy) {
+        Encoding encode = Encoding.PCM_SIGNED;
+        float sampleRate = copy.getSampleRate();
+        int sampleSize = copy.getSampleSizeInBits();
+        int channels = copy.getChannels()*2;
+        int frameSize = copy.getFrameSize();
+        float frameRate = copy.getFrameRate();
+        boolean bigEndian = false;
+        return new AudioFormat(encode, sampleRate, sampleSize, channels, frameSize, frameRate, bigEndian);
+    }
 
-    private TargetDataLine listen() throws LineUnavailableException {
+    private AudioInputStream listen() throws LineUnavailableException {
         final AudioFormat format = defaultFormat();
         DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
         final TargetDataLine line = (TargetDataLine) AudioSystem.getLine(info);
         line.open(format);
         line.start();
-        return line;
+        return new AudioInputStream(line);
     }
 
-    private byte[] toBytes (TargetDataLine line) throws IOException {
+    private AudioInputStream read(File file) 
+        throws UnsupportedAudioFileException, IOException {
+        
+        AudioInputStream in = AudioSystem.getAudioInputStream(file);
+        AudioFormat decodeForm = decodeFormat(in.getFormat());
+        AudioInputStream decodeIn = AudioSystem.getAudioInputStream(decodeForm, in);
+        return decodeIn;
+        //PCMtoPCMCodec convert = new PCMtoPCMCodec(); //not sure if needed
+        //return convert.getAudioInputStream(defaultFormat(), decodeIn);
+    }
+
+    private byte[] toBytes (AudioInputStream line) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         byte[] buffer = new byte[(int)16];
@@ -102,13 +124,20 @@ public class AudioParse {
         AudioParse audParse = new AudioParse();
 
         try {
-            TargetDataLine line = audParse.listen();           
+            AudioInputStream stream = null;
+            
+            boolean someCon = true;
+            if (someCon)
+                stream = audParse.listen();
+            else
+                stream = audParse.read(new File("song" + ".mp3"));
 
-            byte[] audio = audParse.toBytes(line);
+            byte[] audio = audParse.toBytes(stream);
             for (byte val: audio)
                 System.out.println(val);
 
             Complex[][] freqs = audParse.freqTrans(audio);
+            System.out.println("length " + freqs.length);
             
             BufferedWriter bw = new BufferedWriter(new FileWriter("data.txt"));
             DataPoint[] pts = audParse.keyPoints(freqs, songID, bw);
@@ -133,10 +162,13 @@ public class AudioParse {
             System.exit(-1);
         } catch (NoSuchFieldException e) {
             System.err.println("No match found");
+        } catch (UnsupportedAudioFileException e) {
+            System.err.println("Error reading audio file" + e);
         }
     }
 
     public static void main(String[] args) {
         //determine what to parse
+        parseSong(0, false);
     }
 }
