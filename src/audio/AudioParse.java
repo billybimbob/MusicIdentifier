@@ -2,6 +2,7 @@ package audio;
 
 import javax.sound.sampled.*;
 import javax.sound.sampled.AudioFormat.*;
+//import com.sun.media.sound.PCMtoPCMCodec;
 import java.io.*;
 import fourier.*;
 import storage.*;
@@ -21,10 +22,10 @@ public class AudioParse {
     private AudioFormat decodeFormat(AudioFormat copy) {
         Encoding encode = Encoding.PCM_SIGNED;
         float sampleRate = copy.getSampleRate();
-        int sampleSize = copy.getSampleSizeInBits();
-        int channels = copy.getChannels()*2;
-        int frameSize = copy.getFrameSize();
-        float frameRate = copy.getFrameRate();
+        int sampleSize = 16;
+        int channels = copy.getChannels();
+        int frameSize = copy.getChannels()*2;
+        float frameRate = copy.getSampleRate();
         boolean bigEndian = false;
         return new AudioFormat(encode, sampleRate, sampleSize, channels, frameSize, frameRate, bigEndian);
     }
@@ -40,7 +41,7 @@ public class AudioParse {
 
     private AudioInputStream read(File file) 
         throws UnsupportedAudioFileException, IOException {
-        
+        System.out.println("File ob " + file.getName() + " " + file.getPath());
         AudioInputStream in = AudioSystem.getAudioInputStream(file);
         AudioFormat decodeForm = decodeFormat(in.getFormat());
         AudioInputStream decodeIn = AudioSystem.getAudioInputStream(decodeForm, in);
@@ -49,14 +50,14 @@ public class AudioParse {
         //return convert.getAudioInputStream(defaultFormat(), decodeIn);
     }
 
-    private byte[] toBytes (AudioInputStream line) throws IOException {
+    private byte[] toBytes(AudioInputStream line) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         byte[] buffer = new byte[(int)16];
         boolean running = true;
         int loops = 0;
-        while(running && loops < 10) {
-            int count = line.read(buffer, 0, buffer.length);
+        while(running && loops < 325) { //can change condition, like for mic
+            int count = line.read(buffer);
             if (count > 0) {
                 out.write(buffer, 0, count);
                 loops++;
@@ -64,7 +65,9 @@ public class AudioParse {
                 running = false;
         }
         out.close();
+        System.out.println("Loops "+ loops);
         return out.toByteArray();
+        //return line.readAllBytes();
     }
 
     private Complex[][] freqTrans(final byte[] data) { //trans time domain to freq
@@ -120,32 +123,33 @@ public class AudioParse {
         return points;
     }
 
-    public static void parseSong (int songID, boolean adding) {
+    public static void parseSong (int songID, String fileName) {
         AudioParse audParse = new AudioParse();
+        final boolean adding = fileName != null;
 
+        AudioInputStream stream = null;
+        BufferedWriter bw = null;
         try {
-            AudioInputStream stream = null;
-            
-            boolean someCon = true;
-            if (someCon)
-                stream = audParse.listen();
+            System.out.println("Reading from file " + fileName);
+            if (adding)
+                stream = audParse.read(new File(fileName));
             else
-                stream = audParse.read(new File("song" + ".mp3"));
-
+                stream = audParse.listen();
+            
             byte[] audio = audParse.toBytes(stream);
-            for (byte val: audio)
-                System.out.println(val);
+            //for (byte val: audio)
+                //System.out.println(val);
+            System.out.println("bytes " + audio.length);
 
             Complex[][] freqs = audParse.freqTrans(audio);
             System.out.println("length " + freqs.length);
             
-            BufferedWriter bw = new BufferedWriter(new FileWriter("data.txt"));
+            bw = new BufferedWriter(new FileWriter("data.txt"));
             DataPoint[] pts = audParse.keyPoints(freqs, songID, bw);
-            bw.close();
 
             for (DataPoint pt: pts) {
                 if (adding) {
-                    SongMatches.addPoint(pt);
+                    SongMatches.addPoint(pt, fileName);
                     System.out.println("Successfully added data");
                 } else {
                     SongMatches matching = new SongMatches();
@@ -163,12 +167,29 @@ public class AudioParse {
         } catch (NoSuchFieldException e) {
             System.err.println("No match found");
         } catch (UnsupportedAudioFileException e) {
-            System.err.println("Error reading audio file" + e);
+            System.err.println("Error reading audio file ");
+            e.printStackTrace();
+        } finally {
+            System.out.println("closing streams");
+            closeStreams(stream, bw);
+        }
+        
+    }
+
+    private static void closeStreams(Closeable... streams) {
+        for (Closeable stream: streams) {
+            try {
+                if (stream != null) stream.close();
+            } catch(IOException e) {
+                System.err.println("Issue closing " + e);
+            }
         }
     }
 
     public static void main(String[] args) {
         //determine what to parse
-        parseSong(0, false);
+        //parseSong(0, true);
+        parseSong(0, args[0]);
+        System.out.println("Stored info " + SongMatches.namesToString());
     }
 }

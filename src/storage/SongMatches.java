@@ -2,9 +2,24 @@ package storage;
 import java.util.*;
 
 public class SongMatches {
-    private static Map<Integer, List<DataPoint>> points = new HashMap<>();
-    private static Map<Integer, String> names = new HashMap<>();
+    private static Map<Integer, List<DataPoint>> points = new HashMap<>(); //keyPts, list of datapoints; for lookup
+    private static Map<Integer, SongInfo> infos = new HashMap<>(); //id, info
     private Map<Integer, Map<Integer, Integer>> matches;
+
+    private static class SongInfo {
+        private String name;
+        private List<DataPoint> freqs;
+        
+        public SongInfo (String name) {
+            this.name = name;
+            this.freqs = new ArrayList<>();
+        }
+        public String getName() { return this.name; }
+        public List<DataPoint> getFreqs() {
+            return new ArrayList<>(this.freqs); //copies
+        }
+        public void addFreq(DataPoint pt) { freqs.add(pt); }
+    }
     
     public SongMatches () {
         this.matches = new HashMap<>();
@@ -47,8 +62,7 @@ public class SongMatches {
         return songID;
     }
 
-
-    public static void addPoint (DataPoint pt) { //adds values to points
+    public static void addPoint (DataPoint pt, String name) { //adds values to points
         List<DataPoint> possPts;
         if((possPts=points.get(pt.hashCode())) == null) {
             possPts = new ArrayList<>();
@@ -56,8 +70,28 @@ public class SongMatches {
         } else
             possPts.add(pt);
 
-        //if (names.get(pt.getID()) == null)
-            //add name somehow
+        SongInfo match;
+        final Integer id = pt.getID();
+        if ((match=infos.get(id)) == null) {
+            match = new SongInfo(name);
+            match.addFreq(pt);
+            infos.put(id, match);
+        } else
+            match.addFreq(pt);
+
+    }
+
+    public static String namesToString() {
+        StringBuilder accum = new StringBuilder();
+        for (Map.Entry<Integer, SongInfo> entry: infos.entrySet()) {
+            SongInfo info = entry.getValue();
+            
+            accum.append(entry.getKey() + ": " + info.getName() + "\n");
+            for (DataPoint pt: info.getFreqs()) {
+                accum.append("\t" + pt.getTime() + " " + pt.hashCode() + "\n");
+            }
+        }
+        return accum.toString();
     }
 
 }
