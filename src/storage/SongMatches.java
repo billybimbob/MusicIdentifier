@@ -1,58 +1,52 @@
 package storage;
 import java.util.*;
 
+/*
+ * points - hashed sounds as key and all mapped datapoints; for lookup
+ * infos - songId to name and associated datapoints, songId determined by list idx
+ */
+
 public class SongMatches {
-    private static Map<Integer, List<DataPoint>> points = new HashMap<>(); //keyPts, list of datapoints; for lookup
-    private static Map<Integer, SongInfo> infos = new HashMap<>(); //id, info
-    private Map<Integer, Map<Integer, Integer>> matches;
+    private Map<Integer, List<DataPoint>> points;
+    private List<SongInfo> infos;
 
-    private static class SongInfo {
-        private String name;
-        private List<DataPoint> freqs;
-        
-        public SongInfo (String name) {
-            this.name = name;
-            this.freqs = new ArrayList<>();
-        }
-        public String getName() { return this.name; }
-        public List<DataPoint> getFreqs() {
-            return new ArrayList<>(this.freqs); //copies
-        }
-        public void addFreq(DataPoint pt) { freqs.add(pt); }
-    }
-    
     public SongMatches () {
-        this.matches = new HashMap<>();
+        this.points = new HashMap<>();
+        this.infos = new ArrayList<>();
     }
 
-    //checks against points
-    public int findMatch (DataPoint check) throws NoSuchFieldException {
+    public int getNextId() {
+        return infos.size();
+    }
+
+    public int findMatch (DataPoint check) throws NoSuchFieldException { //check against points
         //id of check not used
+        Map<Integer, Map<Integer, Integer>> matches = null; //counts for each point
         List<DataPoint> possPts = null;
         if ((possPts=points.get(check.hashCode())) == null)
             throw new NoSuchFieldException();
 
-        this.matches = new HashMap<>();
+        matches = new HashMap<>();
         for (DataPoint point: possPts) {
             Map<Integer, Integer> counts;
             final int id = point.getID();
             final int offset = Math.abs(point.getTime()-check.getTime());
 
-            if ((counts=matches.get(id)) != null) {
-                int val = counts.get(offset).intValue() + 1;
-                counts.put(offset, Integer.valueOf(val));
-            } else {
+            if ((counts=matches.get(id)) == null) {
                 counts = new HashMap<>();
                 counts.put(offset, 1);
                 matches.put(id, counts);
+            } else {
+                int val = counts.get(offset).intValue() + 1;
+                counts.put(offset, Integer.valueOf(val));
             }
         }
-        return this.bestMatch();
+        return this.bestMatch(matches);
     }
     
-    private int bestMatch () { //finds max count in counts
+    private int bestMatch (Map<Integer, Map<Integer, Integer>> matches) { //finds max count in matches
         int max = 0, songID = -1;
-        for (Map.Entry<Integer, Map<Integer, Integer>> match: this.matches.entrySet()) {
+        for (Map.Entry<Integer, Map<Integer, Integer>> match: matches.entrySet()) {
             for (Map.Entry<Integer, Integer> count: match.getValue().entrySet())
                 if (count.getValue() > max) {
                     max = count.getValue();
@@ -62,7 +56,7 @@ public class SongMatches {
         return songID;
     }
 
-    public static void addPoint (DataPoint pt, String name) { //adds values to points
+    public void addPoint (DataPoint pt, String name) { //adds values to points
         List<DataPoint> possPts;
         if((possPts=points.get(pt.hashCode())) == null) {
             possPts = new ArrayList<>();
@@ -71,22 +65,24 @@ public class SongMatches {
             possPts.add(pt);
 
         SongInfo match;
-        final Integer id = pt.getID();
-        if ((match=infos.get(id)) == null) {
+        final int id = pt.getID();
+        if (id > infos.size()-1) { //in bounds of infos
             match = new SongInfo(name);
             match.addFreq(pt);
-            infos.put(id, match);
-        } else
+            infos.add(match);
+        } else {
+            match = infos.get(id);
             match.addFreq(pt);
-
+        }
     }
 
-    public static String namesToString() {
+    @Override
+    public String toString() {
         StringBuilder accum = new StringBuilder();
-        for (Map.Entry<Integer, SongInfo> entry: infos.entrySet()) {
-            SongInfo info = entry.getValue();
+        for (int id = 0; id < infos.size(); id++) {
+            SongInfo info = infos.get(id);
             
-            accum.append(entry.getKey() + ": " + info.getName() + "\n");
+            accum.append(id + ": " + info.getName() + "\n");
             for (DataPoint pt: info.getFreqs()) {
                 accum.append("\t" + pt.getTime() + " " + pt.hashCode() + "\n");
             }

@@ -2,7 +2,6 @@ package audio;
 
 import javax.sound.sampled.*;
 import javax.sound.sampled.AudioFormat.*;
-//import com.sun.media.sound.PCMtoPCMCodec;
 import java.io.*;
 import fourier.*;
 import storage.*;
@@ -123,8 +122,9 @@ public class AudioParse {
         return points;
     }
 
-    public static void parseSong (int songID, String fileName) {
+    public static void parseSong (SongMatches songSto, String fileName) {
         AudioParse audParse = new AudioParse();
+        final int songID = songSto.getNextId();
         final boolean adding = fileName != null;
 
         AudioInputStream stream = null;
@@ -149,11 +149,10 @@ public class AudioParse {
 
             for (DataPoint pt: pts) {
                 if (adding) {
-                    SongMatches.addPoint(pt, fileName);
+                    songSto.addPoint(pt, fileName);
                     System.out.println("Successfully added data");
                 } else {
-                    SongMatches matching = new SongMatches();
-                    int match = matching.findMatch(pt);
+                    int match = songSto.findMatch(pt);
                     System.out.println("Best match is:" + match);
                 }
             }
@@ -189,7 +188,9 @@ public class AudioParse {
     public static void main(String[] args) {
         //determine what to parse
         //parseSong(0, true);
-        parseSong(0, args[0]);
-        System.out.println("Stored info " + SongMatches.namesToString());
+
+        SongMatches matches = new SongMatches();
+        parseSong(matches, args[0]);
+        System.out.println("Stored info " + matches.toString());
     }
 }
