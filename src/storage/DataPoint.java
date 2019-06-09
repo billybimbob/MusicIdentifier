@@ -25,7 +25,7 @@ public class DataPoint {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode() { //will always be the same
         int ret = 0;
         for (int i = keyPts.length-1; i >= 0; i--)
             ret += (keyPts[i]-(keyPts[i]%FUZ_FACTOR)) * Math.pow(10, i*2);

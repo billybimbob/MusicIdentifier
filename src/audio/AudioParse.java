@@ -160,14 +160,18 @@ public class AudioParse {
         } catch (IOException e) {
             System.err.println("I/O problem: " + e);
             System.exit(-1);
+
         } catch (LineUnavailableException e) {
             System.err.println("No audio: " + e);
             System.exit(-1);
+
         } catch (NoSuchFieldException e) {
             System.err.println("No match found");
+
         } catch (UnsupportedAudioFileException e) {
             System.err.println("Error reading audio file ");
             e.printStackTrace();
+            
         } finally {
             System.out.println("closing streams");
             closeStreams(stream, bw);

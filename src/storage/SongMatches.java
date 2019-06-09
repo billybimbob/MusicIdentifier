@@ -14,6 +14,24 @@ public class SongMatches {
         this.points = new HashMap<>();
         this.infos = new ArrayList<>();
     }
+    public SongMatches (List<SongInfo> start) { //add starting vals to infos and points
+        this.points = new HashMap<>();
+        this.infos = new ArrayList<>();
+        
+        for (SongInfo info: start) {
+            infos.add(info);
+            for (DataPoint pt: info.getFreqs()) {
+                List<DataPoint> pts;
+                int key = pt.hashCode();
+                if((pts=points.get(key)) == null) {
+                    pts = new ArrayList<>();
+                    pts.add(pt);
+                    points.put(key, pts);
+                } else
+                    pts.add(pt);
+            }
+        }
+    }
 
     public int getNextId() {
         return infos.size();
@@ -58,9 +76,11 @@ public class SongMatches {
 
     public void addPoint (DataPoint pt, String name) { //adds values to points
         List<DataPoint> possPts;
-        if((possPts=points.get(pt.hashCode())) == null) {
+        int key = pt.hashCode();
+        if((possPts=points.get(key)) == null) {
             possPts = new ArrayList<>();
             possPts.add(pt);
+            points.put(key, possPts);
         } else
             possPts.add(pt);
 
