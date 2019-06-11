@@ -36,7 +36,7 @@ public class DataPoint {
     public boolean equals(Object other) {
         if (other == null)
             return false;
-        else if(other.getClass() != this.getClass())
+        else if (other.getClass() != this.getClass())
             return false;
         else {
             DataPoint comp = (DataPoint)other;

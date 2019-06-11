@@ -19,4 +19,16 @@ class SongInfo { //only used in SongMatches
     public void addFreq(DataPoint pt) {
         freqs.add(pt);
     }
+
+    @Override
+    public boolean equals(Object other) {
+        if (other == null)
+            return false;
+        else if (this.getClass() != other.getClass())
+            return false;
+        else {
+            SongInfo comp = (SongInfo)other;
+            return this.name.equals(comp.name) && this.freqs.equals(comp.freqs);
+        }
+    }
 }

@@ -52,10 +52,10 @@ public class AudioParse {
     private byte[] toBytes(AudioInputStream line) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        byte[] buffer = new byte[(int)16];
+        byte[] buffer = new byte[(int)1024];
         boolean running = true;
         int loops = 0;
-        while(running && loops < 325) { //can change condition, like for mic
+        while(running && loops < 1000) { //can change condition, like for mic
             int count = line.read(buffer);
             if (count > 0) {
                 out.write(buffer, 0, count);
@@ -112,7 +112,6 @@ public class AudioParse {
                     highFreqs[range] = freq;
                 }
             }
-            System.out.println("got here");
             for (double highFreq: highFreqs)
                 writing.write(highFreq + "\t");
             writing.write("\n");
@@ -122,19 +121,21 @@ public class AudioParse {
         return points;
     }
 
-    public static void parseSong (SongMatches songSto, String fileName) {
+    public static void parseSong (SongMatches songSto, String path) {
         AudioParse audParse = new AudioParse();
         final int songID = songSto.getNextId();
-        final boolean adding = fileName != null;
 
         AudioInputStream stream = null;
         BufferedWriter bw = null;
+        String fileName = null;
         try {
-            System.out.println("Reading from file " + fileName);
-            if (adding)
-                stream = audParse.read(new File(fileName));
-            else
+            if (path == null)
                 stream = audParse.listen();
+            else {
+                File file = new File(path);
+                stream = audParse.read(file);
+                fileName = file.getName();
+            }
             
             byte[] audio = audParse.toBytes(stream);
             //for (byte val: audio)
@@ -145,17 +146,16 @@ public class AudioParse {
             System.out.println("length " + freqs.length);
             
             bw = new BufferedWriter(new FileWriter("data.txt"));
-            DataPoint[] pts = audParse.keyPoints(freqs, songID, bw);
+            final DataPoint[] pts = audParse.keyPoints(freqs, songID, bw);
 
-            for (DataPoint pt: pts) {
-                if (adding) {
-                    songSto.addPoint(pt, fileName);
-                    System.out.println("Successfully added data");
-                } else {
-                    int match = songSto.findMatch(pt);
-                    System.out.println("Best match is:" + match);
-                }
+            if (fileName == null) {
+                int match = songSto.findMatch(pts);
+                System.out.println("Best match is:" + match);
+            } else {
+                songSto.addPoints(pts, fileName);
+                System.out.println("Successfully added data");
             }
+            
 
         } catch (IOException e) {
             System.err.println("I/O problem: " + e);
@@ -195,6 +195,6 @@ public class AudioParse {
 
         SongMatches matches = new SongMatches();
         parseSong(matches, args[0]);
-        System.out.println("Stored info " + matches.toString());
+        System.out.println("Stored info\n" + matches.toString());
     }
 }
