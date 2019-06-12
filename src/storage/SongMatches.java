@@ -1,5 +1,6 @@
 package storage;
 import java.util.*;
+import java.io.*;
 
 /*
  * points - hashed sounds as key and all mapped datapoints; for lookup
@@ -14,10 +15,52 @@ public class SongMatches {
         this.points = new HashMap<>();
         this.infos = new ArrayList<>();
     }
-    public SongMatches (List<SongInfo> start) { //add starting vals to infos and points
-        this.points = new HashMap<>();
-        this.infos = new ArrayList<>();
-        
+    public SongMatches (SongMatches copy) { //copy constructor
+        this.points = new HashMap<>(copy.points);
+        this.infos = new ArrayList<>(copy.infos);
+    }
+    public SongMatches (File file) throws FileNotFoundException, IOException {
+        this();
+        this.addInfo(this.readFile(file));
+    }
+
+    /*
+     * constructor helper methods
+     */
+    private List<SongInfo> readFile(File file) //parses file
+        throws FileNotFoundException, IOException {
+
+        List<SongInfo> info = new ArrayList<>();
+        BufferedReader reading = new BufferedReader(new FileReader(file));
+        String line;
+        while((line=reading.readLine()) != null) {
+            String[] tok = line.trim().split("\\s+");
+            System.out.println("split " + Arrays.toString(tok));
+            if (line.charAt(0) == '\t') { //song point
+                final int id = info.size()-1;
+
+                List<Double> kPts = new ArrayList<>();
+                Scanner lst = new Scanner(tok[1]);
+                lst.useDelimiter("\\[|,|\\]");
+                while(lst.hasNextDouble())
+                    kPts.add(lst.nextDouble());
+                lst.close();
+
+                double[] dArr = new double[kPts.size()];
+                for (int i = 0; i < kPts.size(); i++)
+                    dArr[i] = kPts.get(i);
+
+                int time = Integer.parseInt(tok[0].replaceAll("\\D", ""));
+                System.out.println("adding points " + Arrays.toString(dArr));
+                info.get(id).addFreq(new DataPoint(id, time, dArr));
+            } else { //name
+                info.add(new SongInfo(tok[1]));
+            }
+        }
+        reading.close();
+        return info;
+    }
+    private void addInfo(List<SongInfo> start) { //add starting vals to infos and points; issue adding dups still
         for (SongInfo info: start) { //search for dups; inefficient
             if (!infos.contains(info)) { //bad
                 infos.add(info);
@@ -34,6 +77,9 @@ public class SongMatches {
             }
         }
     }
+
+
+
 
     public int getNextId() {
         return infos.size();
@@ -113,10 +159,12 @@ public class SongMatches {
             
             accum.append(id + ": " + info.getName() + "\n");
             for (DataPoint pt: info.getFreqs()) {
-                accum.append("\t" + pt.getTime() + " " + pt.hashCode() + "\n");
+                accum.append("\t" + pt.toString() + "\n");
             }
         }
         return accum.toString();
     }
+
+    
 
 }

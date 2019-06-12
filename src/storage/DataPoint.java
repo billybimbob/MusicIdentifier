@@ -43,4 +43,17 @@ public class DataPoint {
             return this.songID==comp.songID && this.time==comp.time;
         }
     }
+
+    @Override
+    public String toString() {
+        StringBuilder pts = new StringBuilder("[");
+        for (int i = 0; i < keyPts.length; i++) {
+            pts.append(keyPts[i]);
+            if (i != keyPts.length-1)
+                pts.append(",");
+        }
+        pts.append("]");
+
+        return time + ": " + pts.toString();
+    }
 }

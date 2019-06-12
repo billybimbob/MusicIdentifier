@@ -1,7 +1,7 @@
 package storage;
 import java.util.*;
 
-class SongInfo { //only used in SongMatches
+class SongInfo {
     private String name;
     private List<DataPoint> freqs;
     

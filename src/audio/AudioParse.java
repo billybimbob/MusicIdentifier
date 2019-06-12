@@ -9,6 +9,17 @@ import storage.*;
 public class AudioParse {
     private static final int CHUNK_SIZE = 4096;
     private static final int[] BOUNDS = {40, 80, 120, 180, 300};
+    private SongMatches songs;
+
+    public AudioParse() {}
+    public AudioParse(SongMatches songs) {
+        this.songs = songs;
+    }
+
+    public SongMatches getSongs() { //for immutablity
+        return new SongMatches(songs);
+    }
+
 
     private AudioFormat defaultFormat() {
         float sampleRate = 8000.0f;
@@ -55,7 +66,7 @@ public class AudioParse {
         byte[] buffer = new byte[(int)1024];
         boolean running = true;
         int loops = 0;
-        while(running && loops < 1000) { //can change condition, like for mic
+        while(running && loops < 100) { //can change condition, like for mic
             int count = line.read(buffer);
             if (count > 0) {
                 out.write(buffer, 0, count);
@@ -112,47 +123,47 @@ public class AudioParse {
                     highFreqs[range] = freq;
                 }
             }
+            /*
             for (double highFreq: highFreqs)
                 writing.write(highFreq + "\t");
-            writing.write("\n");
+            writing.write("\n");*/
 
             points[i] = new DataPoint(songID, i, highFreqs);
         }
         return points;
     }
 
-    public static void parseSong (SongMatches songSto, String path) {
-        AudioParse audParse = new AudioParse();
-        final int songID = songSto.getNextId();
+    public void parseSong (String path) { //need to look at structure of this method
+        final int songID = songs.getNextId();
 
         AudioInputStream stream = null;
         BufferedWriter bw = null;
         String fileName = null;
         try {
             if (path == null)
-                stream = audParse.listen();
+                stream = listen();
             else {
                 File file = new File(path);
-                stream = audParse.read(file);
+                stream = read(file);
                 fileName = file.getName();
             }
             
-            byte[] audio = audParse.toBytes(stream);
+            byte[] audio = toBytes(stream);
             //for (byte val: audio)
                 //System.out.println(val);
             System.out.println("bytes " + audio.length);
 
-            Complex[][] freqs = audParse.freqTrans(audio);
+            Complex[][] freqs = freqTrans(audio);
             System.out.println("length " + freqs.length);
             
-            bw = new BufferedWriter(new FileWriter("data.txt"));
-            final DataPoint[] pts = audParse.keyPoints(freqs, songID, bw);
+            bw = new BufferedWriter(new FileWriter("points.txt"));
+            final DataPoint[] pts = keyPoints(freqs, songID, bw);
 
             if (fileName == null) {
-                int match = songSto.findMatch(pts);
+                int match = songs.findMatch(pts);
                 System.out.println("Best match is:" + match);
             } else {
-                songSto.addPoints(pts, fileName);
+                songs.addPoints(pts, fileName);
                 System.out.println("Successfully added data");
             }
             
@@ -178,7 +189,6 @@ public class AudioParse {
         }
         
     }
-
     private static void closeStreams(Closeable... streams) {
         for (Closeable stream: streams) {
             try {
@@ -189,12 +199,34 @@ public class AudioParse {
         }
     }
 
+    public static SongMatches setMatches() {
+        try {
+            return new SongMatches(new File("data.txt"));
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found ");
+        } catch (IOException e) {
+            System.out.println("IO issue " + e);
+        }
+        return new SongMatches();
+    }
+
     public static void main(String[] args) {
         //determine what to parse
         //parseSong(0, true);
 
-        SongMatches matches = new SongMatches();
-        parseSong(matches, args[0]);
-        System.out.println("Stored info\n" + matches.toString());
+        AudioParse audio = new AudioParse(setMatches());
+        audio.parseSong(args[0]);
+        String info = audio.getSongs().toString();
+        System.out.println("Stored info\n" + info);
+
+        try (BufferedWriter write = new BufferedWriter(new FileWriter("data.txt", false))) {
+            System.out.println("Writing to data file");
+            write.write(info);
+
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found");
+        } catch (IOException e) {
+            System.out.println("Issue writing file " +e);
+        }
     }
 }
