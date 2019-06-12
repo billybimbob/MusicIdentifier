@@ -10,16 +10,27 @@ public class AudioParse {
     private static final int CHUNK_SIZE = 4096;
     private static final int[] BOUNDS = {40, 80, 120, 180, 300};
     private SongMatches songs;
+    private int match;
 
-    public AudioParse() {}
+    public AudioParse() {
+        this.match = -1;
+    }
     public AudioParse(SongMatches songs) {
+        this.match = -1;
         this.songs = songs;
     }
 
-    public SongMatches getSongs() { //for immutablity
+    public SongMatches getSongs() { //might want to copy
         return songs;
     }
+    public int getMatch() {
+        return match;
+    }
 
+
+    /*
+     * private helper functions
+     */
 
     private AudioFormat defaultFormat() {
         float sampleRate = 8000.0f;
@@ -51,6 +62,7 @@ public class AudioParse {
 
     private AudioInputStream read(File file) 
         throws UnsupportedAudioFileException, IOException {
+
         System.out.println("File ob " + file.getName() + " " + file.getPath());
         AudioInputStream in = AudioSystem.getAudioInputStream(file);
         AudioFormat decodeForm = decodeFormat(in.getFormat());
@@ -104,8 +116,7 @@ public class AudioParse {
     }
 
     //writes to input writer file
-    private DataPoint[] keyPoints(final Complex[][] freqs, int songID, BufferedWriter writing) 
-        throws IOException {
+    private DataPoint[] keyPoints(final Complex[][] freqs) throws IOException {
         final int LOWER_LIMIT = BOUNDS[0];
         final int UPPER_LIMIT = BOUNDS[BOUNDS.length-1];
         DataPoint[] points = new DataPoint[freqs.length];
@@ -113,6 +124,7 @@ public class AudioParse {
         for (int i = 0; i < freqs.length; i++) {
             double[] highMags = new double[BOUNDS.length];
             double[] highFreqs = new double[BOUNDS.length];
+            final int time = i;
 
             for (int freq = LOWER_LIMIT; freq < UPPER_LIMIT; freq++) {
                 int range = getRange(freq);
@@ -123,72 +135,56 @@ public class AudioParse {
                     highFreqs[range] = freq;
                 }
             }
-            /*
-            for (double highFreq: highFreqs)
-                writing.write(highFreq + "\t");
-            writing.write("\n");*/
-
-            points[i] = new DataPoint(songID, i, highFreqs);
+            points[i] = new DataPoint(time, highFreqs);
         }
         return points;
     }
 
-    public void parseSong (String path) { //need to look at structure of this method
-        final int songID = songs.getNextId();
+    private DataPoint[] parseAudio (AudioInputStream stream) throws IOException {
+        byte[] audio = toBytes(stream);
+        stream.close();
+        System.out.println("bytes " + audio.length);
 
-        AudioInputStream stream = null;
-        BufferedWriter bw = null;
-        String fileName = null;
-        try {
-            if (path == null)
-                stream = listen();
-            else {
-                File file = new File(path);
-                stream = read(file);
-                fileName = file.getName();
-            }
-            
-            byte[] audio = toBytes(stream);
-            //for (byte val: audio)
-                //System.out.println(val);
-            System.out.println("bytes " + audio.length);
-
-            Complex[][] freqs = freqTrans(audio);
-            System.out.println("length " + freqs.length);
-            
-            bw = new BufferedWriter(new FileWriter("points.txt"));
-            final DataPoint[] pts = keyPoints(freqs, songID, bw);
-
-            if (fileName == null) {
-                int match = songs.findMatch(pts);
-                System.out.println("Best match is:" + match);
-            } else {
-                songs.addPoints(pts, fileName);
-                System.out.println("Successfully added data");
-            }
-            
-
-        } catch (IOException e) {
-            System.err.println("I/O problem: " + e);
-            System.exit(-1);
-
-        } catch (LineUnavailableException e) {
-            System.err.println("No audio: " + e);
-            System.exit(-1);
-
-        } catch (NoSuchFieldException e) {
-            System.err.println("No match found");
-
-        } catch (UnsupportedAudioFileException e) {
-            System.err.println("Error reading audio file ");
-            e.printStackTrace();
-            
-        } finally {
-            System.out.println("closing streams");
-            closeStreams(stream, bw);
-        }
+        Complex[][] freqs = freqTrans(audio);
+        System.out.println("length " + freqs.length);
         
+        return keyPoints(freqs);
+
     }
+
+
+    /*
+     * methods to find and add songs
+     */
+
+    public int findSong () throws IOException, NoSuchFieldException {
+        try {
+            AudioInputStream stream = listen();
+            DataPoint[] pts = parseAudio(stream);
+            return songs.findMatch(pts);
+        } catch (LineUnavailableException e) {
+            throw new IOException("Line Unavailable");
+        }
+    }
+    public void addSong (String path) throws IOException { //need to look at structure of this metho
+        try {
+            final int songID = songs.getNextId();
+            File file = new File(path);
+            AudioInputStream stream = read(file);
+            String fileName = file.getName();
+            
+            DataPoint[] pts = parseAudio(stream);
+            for(DataPoint pt: pts)
+                pt.setID(songID);
+
+            songs.addPoints(pts, fileName);
+        } catch (UnsupportedAudioFileException e) {
+            throw new IOException("Cannot Read File");
+        }
+    }
+
+
+    /*
     private static void closeStreams(Closeable... streams) {
         for (Closeable stream: streams) {
             try {
@@ -197,6 +193,10 @@ public class AudioParse {
                 System.err.println("Issue closing " + e);
             }
         }
+    }*/
+
+    public static void parseSong(boolean adding, String path) {
+        //call addSong or findSong
     }
 
     public static SongMatches setMatches() {
@@ -205,28 +205,28 @@ public class AudioParse {
         } catch (FileNotFoundException e) {
             System.out.println("File not found ");
         } catch (IOException e) {
-            System.out.println("IO issue " + e);
+            System.out.println("I/O issue " + e);
         }
         return new SongMatches();
     }
-
-    public static void main(String[] args) {
-        //determine what to parse
-        //parseSong(0, true);
-
-        AudioParse audio = new AudioParse(setMatches());
-        audio.parseSong(args[0]);
-        String info = audio.getSongs().toString();
-        System.out.println("Stored info\n" + info);
-
+    public static void writeMatches(String info) {
         try (BufferedWriter write = new BufferedWriter(new FileWriter("data.txt", false))) {
             System.out.println("Writing to data file");
             write.write(info);
 
-        } catch (FileNotFoundException e) {
-            System.out.println("File not found");
         } catch (IOException e) {
             System.out.println("Issue writing file " +e);
         }
+    }
+
+    public static void main(String[] args) {
+        //determine what to parse
+
+        AudioParse audio = new AudioParse(setMatches());
+        //audio.parseSong(args[0]);
+        String info = audio.getSongs().toString();
+        //System.out.println("Stored info\n" + info);
+        writeMatches(info);
+
     }
 }

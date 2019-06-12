@@ -3,18 +3,23 @@ package storage;
 public class DataPoint {
     private int songID;
     private int time;
-    private double[] keyPts;
+    private int hash;
     private static final int FUZ_FACTOR = 2;
 
     public DataPoint (int songID, int time, double[] keyPts) {
         this.songID = songID;
         this.time = time;
-        this.keyPts = keyPts;
+        this.setHash(keyPts);
     }
-    public DataPoint (int time, double[] keyPts) { //songID undef not sure if to keep
+    public DataPoint (int songID, int time, int hash) {
+        this.songID = songID;
+        this.time = time;
+        this.hash = hash;
+    }
+    public DataPoint (int time, double[] keyPts) { //songID undef
         this.songID = -1;
         this.time = time;
-        this.keyPts = keyPts;
+        this.setHash(keyPts);
     }
 
     public int getID() {
@@ -24,13 +29,18 @@ public class DataPoint {
         return this.time;
     }
 
+    public void setID(int ID) {
+        this.songID = ID;
+    }
+    private void setHash(double[] keyPts) {
+        this.hash = 0;
+        for (int i = keyPts.length-1; i >= 0; i--)
+            this.hash += (keyPts[i]-(keyPts[i]%FUZ_FACTOR)) * Math.pow(10, i*2);
+    }
+
     @Override
     public int hashCode() { //will always be the same
-        int ret = 0;
-        for (int i = keyPts.length-1; i >= 0; i--)
-            ret += (keyPts[i]-(keyPts[i]%FUZ_FACTOR)) * Math.pow(10, i*2);
-
-        return ret;
+        return this.hash;
     }
     @Override
     public boolean equals(Object other) {
@@ -46,14 +56,6 @@ public class DataPoint {
 
     @Override
     public String toString() {
-        StringBuilder pts = new StringBuilder("[");
-        for (int i = 0; i < keyPts.length; i++) {
-            pts.append(keyPts[i]);
-            if (i != keyPts.length-1)
-                pts.append(",");
-        }
-        pts.append("]");
-
-        return time + ": " + pts.toString();
+        return time + ": " + hash;
     }
 }

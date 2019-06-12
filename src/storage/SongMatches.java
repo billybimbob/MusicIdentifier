@@ -34,25 +34,23 @@ public class SongMatches {
         BufferedReader reading = new BufferedReader(new FileReader(file));
         String line;
         while((line=reading.readLine()) != null) {
-            String[] tok = line.trim().split("\\s+");
+            String[] tok;
+
+            final int id = info.size()-1;
             if (line.charAt(0) == '\t') { //song point
-                final int id = info.size()-1;
-
-                List<Double> kPts = new ArrayList<>();
-                Scanner lst = new Scanner(tok[1]);
-                lst.useDelimiter("\\[|,|\\]");
-                while(lst.hasNextDouble())
-                    kPts.add(lst.nextDouble());
-                lst.close();
-
-                double[] dArr = new double[kPts.size()];
-                for (int i = 0; i < kPts.size(); i++)
-                    dArr[i] = kPts.get(i);
-
-                int time = Integer.parseInt(tok[0].replaceAll("\\D", ""));
-                info.get(id).addFreq(new DataPoint(id, time, dArr));
+                tok = line.split(",\\s+");
+                int time, hash;
+                for (String pt: tok) {
+                    String[] ptTok = pt.trim().split(":\\s+");
+                    time = Integer.parseInt(ptTok[0]);
+                    hash = Integer.parseInt(ptTok[1]);
+                    info.get(id).addFreq(new DataPoint(id, time, hash));
+                }
             } else { //name
-                info.add(new SongInfo(tok[1]));
+                tok = line.split(":\\s+");
+                String name = tok[1];
+                if (id >= 0 && !name.equals(info.get(id).getName()) || id < 0) //coalesce with previous entry; maybe index by name?
+                    info.add(new SongInfo(name));
             }
         }
         reading.close();
@@ -73,8 +71,6 @@ public class SongMatches {
             }
         }
     }
-
-
 
 
     public int getNextId() {
@@ -161,10 +157,11 @@ public class SongMatches {
         for (int id = 0; id < infos.size(); id++) {
             SongInfo info = infos.get(id);
             
-            accum.append(id + ": " + info.getName() + "\n");
+            accum.append(id + ": " + info.getName() + "\n\t");
             for (DataPoint pt: info.getFreqs()) {
-                accum.append("\t" + pt.toString() + "\n");
+                accum.append(pt.toString() + ", ");
             }
+            accum.append("\n");
         }
         return accum.toString();
     }
