@@ -25,8 +25,9 @@ public class SongMatches {
     }
 
     /*
-     * constructor helper methods
+     * private helper methods
      */
+
     private List<SongInfo> readFile(File file) //parses file
         throws FileNotFoundException, IOException {
 
@@ -72,9 +73,31 @@ public class SongMatches {
         }
     }
 
+    private int bestMatch (Map<Integer, Map<Integer, Integer>> matches) { //finds max count in matches
+        int max = 0, songID = -1;
+        for (Map.Entry<Integer, Map<Integer, Integer>> match: matches.entrySet()) {
+            int ptCount = 0;
+            for (Map.Entry<Integer, Integer> count: match.getValue().entrySet())
+                ptCount += count.getValue();
+            
+            if (ptCount > max) {
+                max = ptCount;
+                songID = match.getKey();
+            }
+        }
+        return songID;
+    }
 
+
+    /*
+     * public methods
+     */
+    
     public int getNextId() {
         return infos.size();
+    }
+    public String getName(int id) {
+        return infos.get(id).getName();
     }
 
     public int findMatch (DataPoint[] checks) throws NoSuchFieldException { //check against points
@@ -102,21 +125,6 @@ public class SongMatches {
             }
         }
         return this.bestMatch(matches);
-    }
-    
-    private int bestMatch (Map<Integer, Map<Integer, Integer>> matches) { //finds max count in matches
-        int max = 0, songID = -1;
-        for (Map.Entry<Integer, Map<Integer, Integer>> match: matches.entrySet()) {
-            int ptCount = 0;
-            for (Map.Entry<Integer, Integer> count: match.getValue().entrySet())
-                ptCount += count.getValue();
-            
-            if (ptCount > max) {
-                max = ptCount;
-                songID = match.getKey();
-            }
-        }
-        return songID;
     }
 
     public void addPoints (DataPoint[] pts, String name) { //adds values to points

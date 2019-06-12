@@ -10,21 +10,14 @@ public class AudioParse {
     private static final int CHUNK_SIZE = 4096;
     private static final int[] BOUNDS = {40, 80, 120, 180, 300};
     private SongMatches songs;
-    private int match;
 
-    public AudioParse() {
-        this.match = -1;
-    }
+    public AudioParse() {}
     public AudioParse(SongMatches songs) {
-        this.match = -1;
         this.songs = songs;
     }
 
-    public SongMatches getSongs() { //might want to copy
-        return songs;
-    }
-    public int getMatch() {
-        return match;
+    public SongMatches getSongs() { //make immutable
+        return new SongMatches(songs);
     }
 
 
@@ -149,7 +142,6 @@ public class AudioParse {
         System.out.println("length " + freqs.length);
         
         return keyPoints(freqs);
-
     }
 
 
@@ -166,10 +158,9 @@ public class AudioParse {
             throw new IOException("Line Unavailable");
         }
     }
-    public void addSong (String path) throws IOException { //need to look at structure of this metho
+    public void addSong (File file) throws IOException { //need to look at structure of this metho
         try {
             final int songID = songs.getNextId();
-            File file = new File(path);
             AudioInputStream stream = read(file);
             String fileName = file.getName();
             
@@ -195,8 +186,24 @@ public class AudioParse {
         }
     }*/
 
-    public static void parseSong(boolean adding, String path) {
-        //call addSong or findSong
+    public static void parseSong(AudioParse parse, String path) {
+        try {
+            File file = new File(path);
+            parse.addSong(file);
+            System.out.println("Successfully added song");
+        } catch (IOException e) {
+            System.out.println("I/O issue " + e);
+        }
+    }
+    public static void parseSong(AudioParse parse) {
+        try {
+            int match = parse.findSong();
+            System.out.println("Best match: " + parse.getSongs().getName(match));
+        } catch (IOException e) {
+            System.out.println("I/O issue " + e) ;
+        } catch (NoSuchFieldException e) {
+            System.out.println("No match found");
+        }
     }
 
     public static SongMatches setMatches() {
@@ -223,7 +230,7 @@ public class AudioParse {
         //determine what to parse
 
         AudioParse audio = new AudioParse(setMatches());
-        //audio.parseSong(args[0]);
+        parseSong(audio, args[0]);
         String info = audio.getSongs().toString();
         //System.out.println("Stored info\n" + info);
         writeMatches(info);
