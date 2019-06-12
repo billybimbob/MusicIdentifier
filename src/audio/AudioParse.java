@@ -1,7 +1,6 @@
 package audio;
 
 import javax.sound.sampled.*;
-import javax.sound.sampled.AudioFormat.*;
 import java.io.*;
 import fourier.*;
 import audio.storage.*;
