@@ -4,15 +4,19 @@ import javax.sound.sampled.*;
 import javax.sound.sampled.AudioFormat.*;
 import java.io.*;
 import fourier.*;
-import storage.*;
+import audio.storage.*;
 
 public class AudioParse {
     private static final int CHUNK_SIZE = 4096;
     private static final int[] BOUNDS = {40, 80, 120, 180, 300};
     private SongMatches songs;
+    private AudioInput input;
 
-    public AudioParse() {}
+    public AudioParse() {
+        this.input = new AudioInput();
+    }
     public AudioParse(SongMatches songs) {
+        this.input = new AudioInput();
         this.songs = songs;
     }
 
@@ -24,47 +28,6 @@ public class AudioParse {
     /*
      * private helper functions
      */
-
-    private AudioFormat defaultFormat() {
-        float sampleRate = 8000.0f;
-        int sampleSize = 16;
-        int channels = 1;
-        boolean signed = true;
-        boolean bigEndian = true;
-        return new AudioFormat(sampleRate, sampleSize, channels, signed, bigEndian);
-    }
-    private AudioFormat decodeFormat(AudioFormat copy) {
-        Encoding encode = Encoding.PCM_SIGNED;
-        float sampleRate = copy.getSampleRate();
-        int sampleSize = 16;
-        int channels = copy.getChannels();
-        int frameSize = copy.getChannels()*2;
-        float frameRate = copy.getSampleRate();
-        boolean bigEndian = false;
-        return new AudioFormat(encode, sampleRate, sampleSize, channels, frameSize, frameRate, bigEndian);
-    }
-
-    private AudioInputStream listen() throws LineUnavailableException {
-        final AudioFormat format = defaultFormat();
-        DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-        final TargetDataLine line = (TargetDataLine) AudioSystem.getLine(info);
-        line.open(format);
-        line.start();
-        return new AudioInputStream(line);
-    }
-
-    private AudioInputStream read(File file) 
-        throws UnsupportedAudioFileException, IOException {
-
-        System.out.println("File ob " + file.getName() + " " + file.getPath());
-        AudioInputStream in = AudioSystem.getAudioInputStream(file);
-        AudioFormat decodeForm = decodeFormat(in.getFormat());
-        AudioInputStream decodeIn = AudioSystem.getAudioInputStream(decodeForm, in);
-        return decodeIn;
-        //PCMtoPCMCodec convert = new PCMtoPCMCodec(); //not sure if needed
-        //return convert.getAudioInputStream(defaultFormat(), decodeIn);
-    }
-
     private byte[] toBytes(AudioInputStream line) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -151,7 +114,7 @@ public class AudioParse {
 
     public int findSong () throws IOException, NoSuchFieldException {
         try {
-            AudioInputStream stream = listen();
+            AudioInputStream stream = input.listen();
             DataPoint[] pts = parseAudio(stream);
             return songs.findMatch(pts);
         } catch (LineUnavailableException e) {
@@ -161,7 +124,7 @@ public class AudioParse {
     public void addSong (File file) throws IOException { //need to look at structure of this metho
         try {
             final int songID = songs.getNextId();
-            AudioInputStream stream = read(file);
+            AudioInputStream stream = input.read(file);
             String fileName = file.getName();
             
             DataPoint[] pts = parseAudio(stream);
