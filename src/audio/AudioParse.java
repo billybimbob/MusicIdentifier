@@ -17,7 +17,7 @@ public class AudioParse {
     }
 
     public SongMatches getSongs() { //for immutablity
-        return new SongMatches(songs);
+        return songs;
     }
 
 
@@ -66,7 +66,7 @@ public class AudioParse {
         byte[] buffer = new byte[(int)1024];
         boolean running = true;
         int loops = 0;
-        while(running && loops < 100) { //can change condition, like for mic
+        while(running && loops < 1000) { //can change condition, like for mic
             int count = line.read(buffer);
             if (count > 0) {
                 out.write(buffer, 0, count);

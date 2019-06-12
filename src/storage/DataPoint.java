@@ -40,7 +40,7 @@ public class DataPoint {
             return false;
         else {
             DataPoint comp = (DataPoint)other;
-            return this.songID==comp.songID && this.time==comp.time;
+            return this.time==comp.time && this.hashCode() == comp.hashCode(); //id might be wrong
         }
     }
 

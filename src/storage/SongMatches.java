@@ -35,7 +35,6 @@ public class SongMatches {
         String line;
         while((line=reading.readLine()) != null) {
             String[] tok = line.trim().split("\\s+");
-            System.out.println("split " + Arrays.toString(tok));
             if (line.charAt(0) == '\t') { //song point
                 final int id = info.size()-1;
 
@@ -51,7 +50,6 @@ public class SongMatches {
                     dArr[i] = kPts.get(i);
 
                 int time = Integer.parseInt(tok[0].replaceAll("\\D", ""));
-                System.out.println("adding points " + Arrays.toString(dArr));
                 info.get(id).addFreq(new DataPoint(id, time, dArr));
             } else { //name
                 info.add(new SongInfo(tok[1]));
@@ -60,20 +58,18 @@ public class SongMatches {
         reading.close();
         return info;
     }
-    private void addInfo(List<SongInfo> start) { //add starting vals to infos and points; issue adding dups still
-        for (SongInfo info: start) { //search for dups; inefficient
-            if (!infos.contains(info)) { //bad
-                infos.add(info);
-                for (DataPoint pt: info.getFreqs()) {
-                    List<DataPoint> pts;
-                    int key = pt.hashCode();
-                    if((pts=points.get(key)) == null) {
-                        pts = new ArrayList<>();
-                        pts.add(pt);
-                        points.put(key, pts);
-                    } else
-                        pts.add(pt);
-                }
+    private void addInfo(List<SongInfo> start) { //add starting vals to infos and points; songs split up
+        for (SongInfo info: start) {
+            infos.add(info);
+            for (DataPoint pt: info.getFreqs()) {
+                List<DataPoint> pts;
+                int key = pt.hashCode();
+                if((pts=points.get(key)) == null) {
+                    pts = new ArrayList<>();
+                    pts.add(pt);
+                    points.put(key, pts);
+                } else
+                    pts.add(pt);
             }
         }
     }
@@ -130,23 +126,31 @@ public class SongMatches {
     public void addPoints (DataPoint[] pts, String name) { //adds values to points
         for (DataPoint pt: pts) {
             List<DataPoint> possPts;
+            boolean dup = false;
             int key = pt.hashCode();
             if((possPts=points.get(key)) == null) {
                 possPts = new ArrayList<>();
                 possPts.add(pt);
                 points.put(key, possPts);
-            } else
+            } else {
+                for(int i = 0; !dup && i < possPts.size(); i++) //look for dup point
+                    if (possPts.get(i).equals(pt))
+                        dup = true;
+            }
+
+            if (!dup) { //double check dup check, songs could have similar points at same time
                 possPts.add(pt);
 
-            SongInfo match;
-            final int id = pt.getID();
-            if (id > infos.size()-1) { //in bounds of infos
-                match = new SongInfo(name);
-                match.addFreq(pt);
-                infos.add(match);
-            } else {
-                match = infos.get(id);
-                match.addFreq(pt);
+                SongInfo match;
+                final int id = pt.getID();
+                if (id >= infos.size()) { //in bounds of infos
+                    match = new SongInfo(name);
+                    match.addFreq(pt);
+                    infos.add(match);
+                } else {
+                    match = infos.get(id);
+                    match.addFreq(pt);
+                }
             }
         }
     }
