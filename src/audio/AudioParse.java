@@ -8,8 +8,8 @@ import audio.storage.*;
 public class AudioParse {
     private static final int CHUNK_SIZE = 4096;
     private static final int[] BOUNDS = {40, 80, 120, 180, 300};
-    private SongMatches songs;
     private AudioInput input;
+    private SongMatches songs;
 
     public AudioParse() {
         this.input = new AudioInput();
@@ -27,23 +27,27 @@ public class AudioParse {
     /*
      * private helper functions
      */
+    
     private byte[] toBytes(AudioInputStream line) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-        byte[] buffer = new byte[(int)1024];
-        boolean running = true;
-        int loops = 0;
-        while(running && loops < 1000) { //can change condition, like for mic
-            int count = line.read(buffer);
-            if (count > 0) {
-                out.write(buffer, 0, count);
-                loops++;
-            } else
-                running = false;
+            byte[] buffer = new byte[(int)1024];
+            boolean running = true;
+            int loops = 0;
+            while(running && loops < 1000) { //can change condition, like for mic
+                int count = line.read(buffer);
+                if (count > 0) {
+                    out.write(buffer, 0, count);
+                    loops++;
+                } else
+                    running = false;
+            }
+            System.out.println("Loops "+ loops);
+            return out.toByteArray();
+
+        } finally {
+            line.close();
         }
-        out.close();
-        System.out.println("Loops "+ loops);
-        return out.toByteArray();
         //return line.readAllBytes();
     }
 
@@ -71,7 +75,7 @@ public class AudioParse {
     }
 
     //writes to input writer file
-    private DataPoint[] keyPoints(final Complex[][] freqs) throws IOException {
+    private DataPoint[] keyPoints(final Complex[][] freqs) {
         final int LOWER_LIMIT = BOUNDS[0];
         final int UPPER_LIMIT = BOUNDS[BOUNDS.length-1];
         DataPoint[] points = new DataPoint[freqs.length];
@@ -97,7 +101,6 @@ public class AudioParse {
 
     private DataPoint[] parseAudio (AudioInputStream stream) throws IOException {
         byte[] audio = toBytes(stream);
-        stream.close();
         System.out.println("bytes " + audio.length);
 
         Complex[][] freqs = freqTrans(audio);
@@ -112,18 +115,16 @@ public class AudioParse {
      */
 
     public int findSong () throws IOException, NoSuchFieldException {
-        try {
-            AudioInputStream stream = input.listen();
+        try (AudioInputStream stream = input.listen()) {
             DataPoint[] pts = parseAudio(stream);
             return songs.findMatch(pts);
         } catch (LineUnavailableException e) {
-            throw new IOException("Line Unavailable");
+            throw new IOException(e);
         }
     }
     public void addSong (File file) throws IOException { //need to look at structure of this metho
-        try {
+        try (AudioInputStream stream = input.read(file)) {
             final int songID = songs.getNextId();
-            AudioInputStream stream = input.read(file);
             String fileName = file.getName();
             
             DataPoint[] pts = parseAudio(stream);
@@ -132,21 +133,14 @@ public class AudioParse {
 
             songs.addPoints(pts, fileName);
         } catch (UnsupportedAudioFileException e) {
-            throw new IOException("Cannot Read File");
+            throw new IOException(e);
         }
     }
 
 
     /*
-    private static void closeStreams(Closeable... streams) {
-        for (Closeable stream: streams) {
-            try {
-                if (stream != null) stream.close();
-            } catch(IOException e) {
-                System.err.println("Issue closing " + e);
-            }
-        }
-    }*/
+     * static methods
+    */
 
     public static void parseSong(AudioParse parse, String path) {
         try {
@@ -179,9 +173,9 @@ public class AudioParse {
         return new SongMatches();
     }
     public static void writeMatches(String info) {
-        try (BufferedWriter write = new BufferedWriter(new FileWriter("data.txt", false))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("data.txt", false))) {
             System.out.println("Writing to data file");
-            write.write(info);
+            writer.write(info);
 
         } catch (IOException e) {
             System.out.println("Issue writing file " +e);
@@ -192,7 +186,9 @@ public class AudioParse {
         //determine what to parse
 
         AudioParse audio = new AudioParse(setMatches());
-        parseSong(audio, args[0]);
+        for (String path: args)
+            parseSong(audio, path);
+
         String info = audio.getSongs().toString();
         //System.out.println("Stored info\n" + info);
         writeMatches(info);

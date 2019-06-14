@@ -31,31 +31,32 @@ public class SongMatches {
     private List<SongInfo> readFile(File file) //parses file
         throws FileNotFoundException, IOException {
 
-        List<SongInfo> info = new ArrayList<>();
-        BufferedReader reading = new BufferedReader(new FileReader(file));
-        String line;
-        while((line=reading.readLine()) != null) {
-            String[] tok;
+        try (BufferedReader reading = new BufferedReader(new FileReader(file))) {
+                
+            List<SongInfo> info = new ArrayList<>();
+            String line;
+            while((line=reading.readLine()) != null) {
+                String[] tok;
 
-            final int id = info.size()-1;
-            if (line.charAt(0) == '\t') { //song point
-                tok = line.split(",\\s+");
-                int time, hash;
-                for (String pt: tok) {
-                    String[] ptTok = pt.trim().split(":\\s+");
-                    time = Integer.parseInt(ptTok[0]);
-                    hash = Integer.parseInt(ptTok[1]);
-                    info.get(id).addFreq(new DataPoint(id, time, hash));
+                final int id = info.size()-1;
+                if (line.charAt(0) == '\t') { //song point
+                    tok = line.split(",\\s+");
+                    int time, hash;
+                    for (String pt: tok) {
+                        String[] ptTok = pt.trim().split(":\\s+");
+                        time = Integer.parseInt(ptTok[0]);
+                        hash = Integer.parseInt(ptTok[1]);
+                        info.get(id).addFreq(new DataPoint(id, time, hash));
+                    }
+                } else { //name
+                    tok = line.split(":\\s+");
+                    String name = tok[1];
+                    if (id >= 0 && !name.equals(info.get(id).getName()) || id < 0) //coalesce with previous entry; maybe index by name?
+                        info.add(new SongInfo(name));
                 }
-            } else { //name
-                tok = line.split(":\\s+");
-                String name = tok[1];
-                if (id >= 0 && !name.equals(info.get(id).getName()) || id < 0) //coalesce with previous entry; maybe index by name?
-                    info.add(new SongInfo(name));
             }
+            return info;
         }
-        reading.close();
-        return info;
     }
     private void addInfo(List<SongInfo> start) { //add starting vals to infos and points; songs split up
         for (SongInfo info: start) {
