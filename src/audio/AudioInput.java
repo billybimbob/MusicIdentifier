@@ -1,4 +1,5 @@
 package audio;
+
 import java.io.*;
 import javax.sound.sampled.*;
 import javax.sound.sampled.AudioFormat.*;
@@ -36,12 +37,9 @@ class AudioInput {
     public AudioInputStream read(File file) 
         throws UnsupportedAudioFileException, IOException {
 
-        System.out.println("File ob " + file.getName() + " " + file.getPath());
         AudioInputStream in = AudioSystem.getAudioInputStream(file);
         AudioFormat decodeForm = decodeFormat(in.getFormat());
         AudioInputStream decodeIn = AudioSystem.getAudioInputStream(decodeForm, in);
         return decodeIn;
-        //PCMtoPCMCodec convert = new PCMtoPCMCodec(); //not sure if needed
-        //return convert.getAudioInputStream(defaultFormat(), decodeIn);
     }
 }

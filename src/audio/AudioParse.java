@@ -2,11 +2,16 @@ package audio;
 
 import javax.sound.sampled.*;
 import java.io.*;
-import java .util.*;
 import fourier.*;
 import audio.storage.*;
 
+/*
+ * input - used to read audio file or listen to microphone
+ * songs - store info about songs
+ */
+
 public class AudioParse {
+
     private static final int CHUNK_SIZE = 4096;
     private static final int[] BOUNDS = {40, 80, 120, 180, 300};
     private AudioInput input;
@@ -19,6 +24,7 @@ public class AudioParse {
         this.input = new AudioInput();
         this.songs = songs;
     }
+
 
     public SongMatches getSongs() { //make immutable
         return new SongMatches(songs);
@@ -121,7 +127,7 @@ public class AudioParse {
             throw new IOException(e);
         }
     }
-    public void addSong (File file) throws IOException { //need to look at structure of this metho
+    public void addSong (File file) throws IOException {
         try (AudioInputStream stream = input.read(file)) {
             final int songID = songs.getNextId();
             String fileName = file.getName();
@@ -136,78 +142,4 @@ public class AudioParse {
         }
     }
 
-
-    /*
-     * static methods
-     */
-
-    public static void parseSong(AudioParse parse, String path) {
-        try {
-            File file = new File(path);
-            parse.addSong(file);
-            System.out.println("Successfully added song");
-        } catch (IOException e) {
-            System.err.println("I/O issue " + e);
-        }
-    }
-    public static void parseSong(AudioParse parse) {
-        try {
-            int match = parse.findSong();
-            System.out.println("Best match: " + parse.getSongs().getName(match));
-        } catch (IOException e) {
-            System.err.println("I/O issue " + e) ;
-        } catch (NoSuchFieldException e) {
-            System.err.println("No match found");
-        }
-    }
-
-    public static SongMatches setMatches() {
-        try {
-            return new SongMatches(new File("data.txt"));
-        } catch (FileNotFoundException e) {
-            System.err.println("File not found ");
-        } catch (IOException e) {
-            System.err.println("I/O issue " + e);
-        }
-        return new SongMatches();
-    }
-    public static void writeMatches(String info) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("data.txt", false))) {
-            System.err.println("Writing to data file");
-            writer.write(info);
-
-        } catch (IOException e) {
-            System.err.println("Issue writing file " +e);
-        }
-    }
-
-    public static void main(String[] args) {
-        //determine what to parse
-
-        AudioParse audio = new AudioParse(setMatches());
-
-        List<Thread> threads = new ArrayList<>();
-        for (String path: args) {
-            Thread thread = new Thread(new Runnable(){ //not sure
-                @Override
-                public void run() {
-                    parseSong(audio, path);
-                }
-            });
-            threads.add(thread);
-            thread.start();
-        }
-
-        for (Thread thread: threads)
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                System.err.println("Error joining");
-            }
-            
-        String info = audio.getSongs().toString();
-        //System.out.println("Stored info\n" + info);
-        writeMatches(info);
-
-    }
 }
