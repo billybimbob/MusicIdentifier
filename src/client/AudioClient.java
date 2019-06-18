@@ -2,6 +2,7 @@ package client;
 
 import java.io.*;
 import java.util.*;
+import java.net.URL;
 import audio.*;
 import audio.storage.*;
 
@@ -9,8 +10,13 @@ class AudioClient {
 
     public static void parseSong(AudioParse parse, String path) {
         try {
-            File file = new File(path);
-            parse.addSong(file);
+            if (path.contains("http")) {
+                URL url = new URL(path);
+                parse.addSong(url);
+            } else {
+                File file = new File(path);
+                parse.addSong(file);
+            }
             System.out.println("Successfully added song");
 
         } catch (IOException e) {
@@ -58,9 +64,9 @@ class AudioClient {
 
         AudioParse audio = new AudioParse(setMatches());
 
-        List<Thread> threads = new ArrayList<>();
+        //List<Thread> threads = new ArrayList<>();
         for (String path: args) {
-            Thread thread = new Thread(new Runnable(){ //not sure
+            /*Thread thread = new Thread(new Runnable(){ //not sure
                 @Override
                 public void run() {
                     parseSong(audio, path);
@@ -76,7 +82,9 @@ class AudioClient {
             } catch (InterruptedException e) {
                 System.err.println("Error joining");
             }
-            
+        */
+            parseSong(audio, path);
+        }
         String info = audio.getSongs().toString();
         //System.out.println("Stored info\n" + info);
         writeMatches(info);

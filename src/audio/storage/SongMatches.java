@@ -1,5 +1,7 @@
 package audio.storage;
+
 import java.util.*;
+import java.util.concurrent.*;
 import java.io.*;
 
 /*
@@ -12,12 +14,12 @@ public class SongMatches {
     private List<SongInfo> infos;
 
     public SongMatches () {
-        this.points = new HashMap<>();
-        this.infos = new ArrayList<>();
+        this.points = new ConcurrentHashMap<>();
+        this.infos = Collections.synchronizedList(new ArrayList<>());
     }
     public SongMatches (SongMatches copy) { //copy constructor
-        this.points = new HashMap<>(copy.points);
-        this.infos = new ArrayList<>(copy.infos);
+        this.points = new ConcurrentHashMap<>(copy.points);
+        this.infos = Collections.synchronizedList(new ArrayList<>(copy.infos));
     }
     public SongMatches (File file) throws FileNotFoundException, IOException {
         this();

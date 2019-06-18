@@ -1,6 +1,7 @@
 package audio;
 
 import java.io.*;
+import java.net.URL;
 import javax.sound.sampled.*;
 import javax.sound.sampled.AudioFormat.*;
 
@@ -34,12 +35,23 @@ class AudioInput {
         return new AudioInputStream(line);
     }
 
+    private AudioInputStream convert(AudioInputStream input) {
+
+        AudioFormat decodeForm = decodeFormat(input.getFormat());
+        AudioInputStream decodeIn = AudioSystem.getAudioInputStream(decodeForm, input);
+        return decodeIn;
+    }
+
     public AudioInputStream read(File file) 
         throws UnsupportedAudioFileException, IOException {
 
         AudioInputStream in = AudioSystem.getAudioInputStream(file);
-        AudioFormat decodeForm = decodeFormat(in.getFormat());
-        AudioInputStream decodeIn = AudioSystem.getAudioInputStream(decodeForm, in);
-        return decodeIn;
+        return convert(in);
+    }
+    public AudioInputStream read(URL url) 
+        throws UnsupportedAudioFileException, IOException {
+        
+        AudioInputStream in = AudioSystem.getAudioInputStream(url);
+        return convert(in);
     }
 }

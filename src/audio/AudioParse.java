@@ -2,6 +2,7 @@ package audio;
 
 import javax.sound.sampled.*;
 import java.io.*;
+import java.net.URL;
 import fourier.*;
 import audio.storage.*;
 
@@ -114,6 +115,15 @@ public class AudioParse {
         return keyPoints(freqs);
     }
 
+    private void addFromStream (AudioInputStream stream, String name) throws IOException {
+        final int songID = songs.getNextId();
+        DataPoint[] pts = parseAudio(stream);
+        for(DataPoint pt: pts)
+            pt.setID(songID);
+
+        songs.addPoints(pts, name);
+    }
+
 
     /*
      * methods to find and add songs
@@ -129,14 +139,18 @@ public class AudioParse {
     }
     public void addSong (File file) throws IOException {
         try (AudioInputStream stream = input.read(file)) {
-            final int songID = songs.getNextId();
             String fileName = file.getName();
-            
-            DataPoint[] pts = parseAudio(stream);
-            for(DataPoint pt: pts)
-                pt.setID(songID);
+            addFromStream(stream, fileName);
 
-            songs.addPoints(pts, fileName);
+        } catch (UnsupportedAudioFileException e) {
+            throw new IOException(e);
+        }
+    }
+    public void addSong (URL url) throws IOException {
+        try (AudioInputStream stream = input.read(url)) {
+            String name = url.getFile();
+            addFromStream(stream, name);
+        
         } catch (UnsupportedAudioFileException e) {
             throw new IOException(e);
         }
