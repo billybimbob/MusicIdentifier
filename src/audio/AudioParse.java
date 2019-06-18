@@ -2,6 +2,7 @@ package audio;
 
 import javax.sound.sampled.*;
 import java.io.*;
+import java .util.*;
 import fourier.*;
 import audio.storage.*;
 
@@ -45,8 +46,6 @@ public class AudioParse {
             System.out.println("Loops "+ loops);
             return out.toByteArray();
 
-        } finally {
-            line.close();
         }
         //return line.readAllBytes();
     }
@@ -140,7 +139,7 @@ public class AudioParse {
 
     /*
      * static methods
-    */
+     */
 
     public static void parseSong(AudioParse parse, String path) {
         try {
@@ -148,7 +147,7 @@ public class AudioParse {
             parse.addSong(file);
             System.out.println("Successfully added song");
         } catch (IOException e) {
-            System.out.println("I/O issue " + e);
+            System.err.println("I/O issue " + e);
         }
     }
     public static void parseSong(AudioParse parse) {
@@ -156,9 +155,9 @@ public class AudioParse {
             int match = parse.findSong();
             System.out.println("Best match: " + parse.getSongs().getName(match));
         } catch (IOException e) {
-            System.out.println("I/O issue " + e) ;
+            System.err.println("I/O issue " + e) ;
         } catch (NoSuchFieldException e) {
-            System.out.println("No match found");
+            System.err.println("No match found");
         }
     }
 
@@ -166,19 +165,19 @@ public class AudioParse {
         try {
             return new SongMatches(new File("data.txt"));
         } catch (FileNotFoundException e) {
-            System.out.println("File not found ");
+            System.err.println("File not found ");
         } catch (IOException e) {
-            System.out.println("I/O issue " + e);
+            System.err.println("I/O issue " + e);
         }
         return new SongMatches();
     }
     public static void writeMatches(String info) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("data.txt", false))) {
-            System.out.println("Writing to data file");
+            System.err.println("Writing to data file");
             writer.write(info);
 
         } catch (IOException e) {
-            System.out.println("Issue writing file " +e);
+            System.err.println("Issue writing file " +e);
         }
     }
 
@@ -186,9 +185,26 @@ public class AudioParse {
         //determine what to parse
 
         AudioParse audio = new AudioParse(setMatches());
-        for (String path: args)
-            parseSong(audio, path);
 
+        List<Thread> threads = new ArrayList<>();
+        for (String path: args) {
+            Thread thread = new Thread(new Runnable(){ //not sure
+                @Override
+                public void run() {
+                    parseSong(audio, path);
+                }
+            });
+            threads.add(thread);
+            thread.start();
+        }
+
+        for (Thread thread: threads)
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                System.err.println("Error joining");
+            }
+            
         String info = audio.getSongs().toString();
         //System.out.println("Stored info\n" + info);
         writeMatches(info);
