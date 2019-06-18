@@ -115,7 +115,7 @@ public class AudioParse {
         return keyPoints(freqs);
     }
 
-    private void addFromStream (AudioInputStream stream, String name) throws IOException {
+    private synchronized void addFromStream (AudioInputStream stream, String name) throws IOException {
         final int songID = songs.getNextId();
         DataPoint[] pts = parseAudio(stream);
         for(DataPoint pt: pts)
